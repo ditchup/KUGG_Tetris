@@ -2,6 +2,9 @@ enchant();
 
 /*
 TODO
+FallingTetrominoのblocksを行列形式でなくリスト形式にする
+FixedTetrominoの天井を１マス（か２マス）上に上げる（回転できるように。・・・そこで固定されたらどうしよう）
+FallingTetrominoのrotateRight/Leftの名前をmakeRightRotatedBlocksとでも変える
 */
 
 
@@ -20,8 +23,8 @@ var Tetromino = function (type) {
 			[0,0,1,0,0],
 			[0,0,0,0,0],
 		];
-		this.ox = 0;
-		this.oy = 0;
+		this.ox = 3;
+		this.oy = 0; // 横向きだと最初回転できないのが嫌。→detectHit
 	} else if (type == "O") {
 		this.blocks = [
 			[0,0,0,0,0],
@@ -40,8 +43,8 @@ var Tetromino = function (type) {
 			[0,1,1,0,0],
 			[0,0,0,0,0],
 		];
-		this.ox = 0;
-		this.oy = 0;
+		this.ox = 3;
+		this.oy = -2; // 天井は無い？ある？→hitDetect
 	} else if (type == "Z") {
 		this.blocks = [
 			[0,0,0,0,0],
@@ -50,28 +53,28 @@ var Tetromino = function (type) {
 			[0,0,1,1,0],
 			[0,0,0,0,0],
 		];
-		this.ox = 0;
-		this.oy = 0;
-	} else if (type == "J") {
+		this.ox = 3;
+		this.oy = -2;
+	} else if (type == "J") { // どうやって回転させる？→お手本を見る
 		this.blocks = [
-			[0,0,0,0,0],
 			[0,0,0,0,0],
 			[0,0,0,1,0],
 			[0,1,1,1,0],
 			[0,0,0,0,0],
+			[0,0,0,0,0],
 		];
-		this.ox = 0;
-		this.oy = 0;
+		this.ox = 3;
+		this.oy = -1;
 	} else if (type == "L") {
 		this.blocks = [
-			[0,0,0,0,0],
 			[0,0,0,0,0],
 			[0,1,0,0,0],
 			[0,1,1,1,0],
 			[0,0,0,0,0],
+			[0,0,0,0,0],
 		];
-		this.ox = 0;
-		this.oy = 0;
+		this.ox = 3;
+		this.oy = -1;
 	} else if (type == "T") {
 		this.blocks = [
 			[0,0,0,0,0],
@@ -95,12 +98,13 @@ TetrominoFactory.prototype.makeTetromino = function (type) {
 
 TetrominoFactory.prototype.makeRandomTetromino = function () {
 	var types = ["I", "O", "S", "Z", "J", "L", "T"];
-	return this.makeTetromino(types[Math.floor(Math.random() * 7) ]); //Math.floor(Math.random() * 7) 
+	return this.makeTetromino(types[Math.floor(Math.random() * 7) ]); 
 };
 
 
 var tetrominofactory = new TetrominoFactory();
 
+// 落下中のテトロミノ
 var FallingTetromino = Class.create(Sprite, {
 	initialize: function () {
 		Sprite.call(this, BLOCKSIZE * 5, BLOCKSIZE * 5);
@@ -121,8 +125,8 @@ var FallingTetromino = Class.create(Sprite, {
 });
 
 FallingTetromino.prototype.reset = function () {
-	var tetromino = tetrominofactory.makeRandomTetromino();//makeTetromino("S");//makeRandomTetromino();
-	this.blocks = tetromino.blocks; // 全種類分用意する？
+	var tetromino = tetrominofactory.makeTetromino("L");//makeRandomTetromino();
+	this.blocks = tetromino.blocks;
 	this.type = tetromino.type;
 	
 	this.x = tetromino.ox * BLOCKSIZE;
@@ -276,7 +280,7 @@ FixedTetromino.prototype.drawblocks = function () {
 };
 
 // 重なるブロックがあれば、相手のblocks内の位置を表す配列を、そうでなければnullを返す。
-// o_x, o_yはfalling_blockのx, y座標を、BLOCKSIZEで割ったもの。（ここで割る？）
+// ox, oyはfalling_blockのx, y座標を、BLOCKSIZEで割ったもの。（ここで割る？）
 // 渡された座標とブロックの組み合わせが範囲外でも配列を返す。
 // 床・壁（範囲外２マス以内）なら、そこにブロックがあるかのように相手のblocks内の位置を返す。
 // それ以上離れた位置にある場合、そうわかった時点で、その軸の値（？？？）を-1、もう一方の軸の値を0とした配列を返す。
@@ -423,31 +427,57 @@ window.onload = function () {
 		var fixed_tetromino = new FixedTetromino();
 		game.rootScene.addChild(fixed_tetromino);
 		
+		//var previous_input = {left: false, right: false, up: false, down: false};
+		var key_count = {left: 0, right: 0, up:0, down:0};
+		
 		// 異なるオブジェクトを一緒に扱うとき、うまい書き方がわかんない・・・
+		// rootSceneのイベントリスナにすべきじゃない？
 		falling_tetromino.addEventListener("enterframe", function () {
 			// ユーザからの操作を受け付ける
 			var newblocks;
-			if (game.input.left) {
+			if (game.input.left && (key_count.left % 4) == 0) {
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE - 1, this.y/BLOCKSIZE, this.blocks) == null) {
 					this.moveLeft();
 				}
 			}
-			if (game.input.right) {
+			if (game.input.right && (key_count.right % 4) == 0) {
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE + 1, this.y/BLOCKSIZE, this.blocks) == null) {
 					this.moveRight();
 				}
 			}
-			if (game.input.down) {
+			if (game.input.down && (key_count.down % 4) == 0) { // 自動で落ちるタイミングと、兼ね合いが・・・なにか別のパラメータを共有して、判定する？
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE, this.y/BLOCKSIZE + 1, this.blocks) == null) {
 					this.moveDown();
 				}
 			}
-			if (game.input.up) {
+			if (game.input.up && key_count.up == 0) {
 				newblocks = this.rotateRight();
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE, this.y/BLOCKSIZE, newblocks) == null) {
 					this.blocks = newblocks;
 					this.drawblocks();
 				}
+			}
+			
+			// キー操作の記録
+			if (game.input.left) {
+				key_count.left++;
+			} else {
+				key_count.left = 0
+			}
+			if (game.input.right) {
+				key_count.right++;
+			} else {
+				key_count.right = 0
+			}
+			if (game.input.down) {
+				key_count.down++;
+			} else {
+				key_count.down = 0
+			}
+			if (game.input.up) {
+				key_count.up++;
+			} else {
+				key_count.up = 0
 			}
 			
 			// 時間経過で落ちる（★工夫がいる？）
@@ -504,5 +534,5 @@ window.onload = function () {
 			}
 		});
 	};
-	game.start();
+	game.debug();
 };
