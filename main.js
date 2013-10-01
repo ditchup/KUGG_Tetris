@@ -2,16 +2,22 @@ enchant();
 
 /*
 TODO
+・操作の不具合
+FixedTetrominoの天井を１マス（か２マス）上に上げる（一番上で回転できるように。・・・そこで固定されたらどうしよう）
+・効率UP
 FallingTetrominoのblocksを行列形式でなくリスト形式にする
-FixedTetrominoの天井を１マス（か２マス）上に上げる（回転できるように。・・・そこで固定されたらどうしよう）
+・命名規則？
 FallingTetrominoのrotateRight/Leftの名前をmakeRightRotatedBlocksとでも変える
+FixedTetrominoのhitDetectの名前を変える。detect???とか？
+
+・・・重くなってきた。
 */
 
 
 var watch;
 
-var BLOCKSIZE = 16
-var FPS = 30;
+var BLOCKSIZE = 16;
+var FPS = 16;
 
 var Tetromino = function (type) {
 	this.type = type;
@@ -98,7 +104,7 @@ TetrominoFactory.prototype.makeTetromino = function (type) {
 
 TetrominoFactory.prototype.makeRandomTetromino = function () {
 	var types = ["I", "O", "S", "Z", "J", "L", "T"];
-	return this.makeTetromino(types[Math.floor(Math.random() * 7) ]); 
+	return this.makeTetromino(types[Math.floor(Math.random() * 7)]); 
 };
 
 
@@ -125,7 +131,7 @@ var FallingTetromino = Class.create(Sprite, {
 });
 
 FallingTetromino.prototype.reset = function () {
-	var tetromino = tetrominofactory.makeTetromino("L");//makeRandomTetromino();
+	var tetromino = tetrominofactory.makeRandomTetromino();
 	this.blocks = tetromino.blocks;
 	this.type = tetromino.type;
 	
@@ -143,9 +149,9 @@ FallingTetromino.prototype.drawblocks = function () {
 	for (i = 0; i < this.blocks.length; i++) {
 		for (j = 0; j < this.blocks[i].length; j++) {
 			if (this.blocks[i][j] == 1) {
-				if (i == 2 && j == 2)
+				/*if (i == 2 && j == 2)
 					ctx.fillStyle = "red";
-				else
+				else*/
 					ctx.fillStyle = "green";
 				
 				ctx.fillRect(j*BLOCKSIZE, i*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE);
@@ -428,28 +434,34 @@ window.onload = function () {
 		game.rootScene.addChild(fixed_tetromino);
 		
 		//var previous_input = {left: false, right: false, up: false, down: false};
+		var moveLR_interval = 3;
 		var key_count = {left: 0, right: 0, up:0, down:0};
+		
+		var fall_wait = 2 * 64 / FPS;
+		var fall_timer = fall_wait;
+		
 		
 		// 異なるオブジェクトを一緒に扱うとき、うまい書き方がわかんない・・・
 		// rootSceneのイベントリスナにすべきじゃない？
 		falling_tetromino.addEventListener("enterframe", function () {
 			// ユーザからの操作を受け付ける
 			var newblocks;
-			if (game.input.left && (key_count.left % 4) == 0) {
+			if (game.input.left && (key_count.left % moveLR_interval) == 0) {
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE - 1, this.y/BLOCKSIZE, this.blocks) == null) {
 					this.moveLeft();
 				}
 			}
-			if (game.input.right && (key_count.right % 4) == 0) {
+			if (game.input.right && (key_count.right % moveLR_interval) == 0) {
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE + 1, this.y/BLOCKSIZE, this.blocks) == null) {
 					this.moveRight();
 				}
 			}
-			if (game.input.down && (key_count.down % 4) == 0) { // 自動で落ちるタイミングと、兼ね合いが・・・なにか別のパラメータを共有して、判定する？
+			/*if (game.input.down && (key_count.down % 4) == 0) { // 自動で落ちるタイミングと、兼ね合いが・・・なにか別のパラメータを共有して、判定する？
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE, this.y/BLOCKSIZE + 1, this.blocks) == null) {
 					this.moveDown();
 				}
-			}
+			}*/
+			
 			if (game.input.up && key_count.up == 0) {
 				newblocks = this.rotateRight();
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE, this.y/BLOCKSIZE, newblocks) == null) {
@@ -469,19 +481,28 @@ window.onload = function () {
 			} else {
 				key_count.right = 0
 			}
+			/*
 			if (game.input.down) {
 				key_count.down++;
 			} else {
 				key_count.down = 0
-			}
+			}*/
 			if (game.input.up) {
 				key_count.up++;
 			} else {
 				key_count.up = 0
 			}
 			
+			// 落下加速
+			if (game.input.down) {
+				fall_timer -= 4;
+			} else {
+				fall_timer -= 1;
+			}
+			
 			// 時間経過で落ちる（★工夫がいる？）
-			if (this.age % 20 == 0) {
+			if (fall_timer <= 0) { // this.age % 20 == 0
+				fall_timer = fall_wait;
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE, this.y/BLOCKSIZE + 1, this.blocks) == null) {
 					this.moveDown();
 				} else {
@@ -534,5 +555,6 @@ window.onload = function () {
 			}
 		});
 	};
-	game.debug();
+	//game.debug();
+	game.start();
 };
