@@ -4,6 +4,9 @@ enchant();
 TODO
 ・操作の不具合
 FixedTetrominoの天井を１マス（か２マス）上に上げる（一番上で回転できるように。・・・そこで固定されたらどうしよう）
+ハードドロップで、ボタン押しっぱなしだと次のブロックもハードドロップしてしまう。（誤操作を招く）
+→出現から数フレーム待つようにするのはどうか。また変数が増える・・・。
+			
 ・効率UP
 FallingTetrominoのblocksを行列形式でなくリスト形式にする
 ・命名規則？
@@ -17,7 +20,7 @@ FixedTetrominoのhitDetectの名前を変える。detect???とか？
 var watch;
 
 var BLOCKSIZE = 16;
-var FPS = 16;
+var FPS = 30;
 
 var Tetromino = function (type) {
 	this.type = type;
@@ -434,12 +437,15 @@ window.onload = function () {
 		game.rootScene.addChild(fixed_tetromino);
 		
 		//var previous_input = {left: false, right: false, up: false, down: false};
+		game.keybind('Z'.charCodeAt(0), 'a');
+        	game.keybind('X'.charCodeAt(0), 'b');
+		
 		var moveLR_interval = 3;
-		var key_count = {left: 0, right: 0, up:0, down:0};
+		var key_count = {left: 0, right: 0, up: 0, down: 0, a: 0, b: 0};
 		
 		var fall_wait = 2 * 64 / FPS;
 		var fall_timer = fall_wait;
-		
+		var hard_drop_flag = false;
 		
 		// 異なるオブジェクトを一緒に扱うとき、うまい書き方がわかんない・・・
 		// rootSceneのイベントリスナにすべきじゃない？
@@ -462,12 +468,33 @@ window.onload = function () {
 				}
 			}*/
 			
-			if (game.input.up && key_count.up == 0) {
+			if (game.input.a && key_count.a == 0) {
+				newblocks = this.rotateLeft();
+				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE, this.y/BLOCKSIZE, newblocks) == null) {
+					this.blocks = newblocks;
+					this.drawblocks();
+				}
+			}
+			if (game.input.b && key_count.b == 0) {
 				newblocks = this.rotateRight();
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE, this.y/BLOCKSIZE, newblocks) == null) {
 					this.blocks = newblocks;
 					this.drawblocks();
 				}
+			}
+			
+			// ハードドロップ
+			// ×：押しっぱなしだと次のブロックもハードドロップしてしまう。
+			// →出現から数フレーム待つようにするのはどうか。（また変数が増える・・・）
+			if (game.input.up) { //　&& key_count.up == 0
+				hard_drop_flag = true;
+			}
+			
+			// 落下加速
+			if (game.input.down) {
+				fall_timer -= 4;
+			} else {
+				fall_timer -= 1;
 			}
 			
 			// キー操作の記録
@@ -492,20 +519,24 @@ window.onload = function () {
 			} else {
 				key_count.up = 0
 			}
-			
-			// 落下加速
-			if (game.input.down) {
-				fall_timer -= 4;
+			if (game.input.a) {
+				key_count.a++;
 			} else {
-				fall_timer -= 1;
+				key_count.a = 0
+			}
+			if (game.input.b) {
+				key_count.b++;
+			} else {
+				key_count.b = 0
 			}
 			
 			// 時間経過で落ちる（★工夫がいる？）
-			if (fall_timer <= 0) { // this.age % 20 == 0
+			if (hard_drop_flag || fall_timer <= 0) { // this.age % 20 == 0
 				fall_timer = fall_wait;
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE, this.y/BLOCKSIZE + 1, this.blocks) == null) {
 					this.moveDown();
 				} else {
+					hard_drop_flag = false;
 					// ブロックを固定する（fixed_blockにブロックを追加する）
 					fixed_tetromino.fixBlocks(this);
 					
