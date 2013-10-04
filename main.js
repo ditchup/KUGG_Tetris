@@ -443,7 +443,7 @@ window.onload = function () {
 		var moveLR_interval = 3;
 		var key_count = {left: 0, right: 0, up: 0, down: 0, a: 0, b: 0};
 		
-		var fall_wait = 2 * 64 / FPS;
+		var fall_wait = 4 * 64 / FPS;
 		var fall_timer = fall_wait;
 		var hard_drop_flag = false;
 		
@@ -486,7 +486,7 @@ window.onload = function () {
 			// ハードドロップ
 			// ×：押しっぱなしだと次のブロックもハードドロップしてしまう。
 			// →出現から数フレーム待つようにするのはどうか。（また変数が増える・・・）
-			if (game.input.up) { //　&& key_count.up == 0
+			if (game.input.up && key_count.up == 0) { //　&& key_count.up == 0
 				hard_drop_flag = true;
 			}
 			
