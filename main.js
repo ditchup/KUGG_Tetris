@@ -184,6 +184,11 @@ FallingTetromino.prototype.moveDown = function () {
 	this.y += BLOCKSIZE;
 }
 
+FallingTetromino.prototype.moveY = function (dist) {
+	// （もしブロックや床がなければ）
+	this.y += BLOCKSIZE * dist;
+}
+
 FallingTetromino.prototype.rotateRight = function () {
 	if (this.type == "O")
 		return this.blocks; // 回転しない
@@ -458,12 +463,12 @@ window.onload = function () {
 		falling_tetromino.addEventListener("enterframe", function () {
 			// ユーザからの操作を受け付ける
 			var newblocks;
-			if (!hard_drop_flag && game.input.left && (key_count.left % moveLR_interval) == 0) {
+			if (game.input.left && (key_count.left % moveLR_interval) == 0) {
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE - 1, this.y/BLOCKSIZE, this.blocks) == null) {
 					this.moveLeft();
 				}
 			}
-			if (!hard_drop_flag && game.input.right && (key_count.right % moveLR_interval) == 0) {
+			if (game.input.right && (key_count.right % moveLR_interval) == 0) {
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE + 1, this.y/BLOCKSIZE, this.blocks) == null) {
 					this.moveRight();
 				}
@@ -474,14 +479,14 @@ window.onload = function () {
 				}
 			}*/
 			
-			if (!hard_drop_flag && game.input.a && key_count.a == 0) {
+			if (game.input.a && key_count.a == 0) {
 				newblocks = this.rotateLeft();
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE, this.y/BLOCKSIZE, newblocks) == null) {
 					this.blocks = newblocks;
 					this.drawblocks();
 				}
 			}
-			if (!hard_drop_flag && game.input.b && key_count.b == 0) {
+			if (game.input.b && key_count.b == 0) {
 				newblocks = this.rotateRight();
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE, this.y/BLOCKSIZE, newblocks) == null) {
 					this.blocks = newblocks;
@@ -489,11 +494,38 @@ window.onload = function () {
 				}
 			}
 			
-			// ハードドロップ
-			// ×：押しっぱなしだと次のブロックもハードドロップしてしまう。
-			// →出現から数フレーム待つようにするのはどうか。（また変数が増える・・・）
+			// ハードドロップ２
+			// 押したら下まで瞬間移動。
 			if (game.input.up && key_count.up == 0) { //　&& key_count.up == 0
-				hard_drop_flag = true;
+				var i, j, k;
+				var dist
+				var dist_min = fixed_tetromino.H;
+				for (i = 0; i < falling_tetromino.blocks.length; i++) {
+					for (j = 0; j < falling_tetromino.blocks[i].length; j++) {
+						if (falling_tetromino.blocks[i][j] == 1) {
+							//console.log("x: " + (j + falling_tetromino.x/BLOCKSIZE) + "y: " + (i + falling_tetromino.y/BLOCKSIZE));
+							for (k = i + falling_tetromino.y/BLOCKSIZE + 1; k < fixed_tetromino.blocks.length; k++) {
+								if (fixed_tetromino.blocks[k][j+falling_tetromino.x/BLOCKSIZE] == 1)
+									break;
+							}
+							
+							
+							
+							dist = k - (i + falling_tetromino.y/BLOCKSIZE) - 1;
+							if (dist < dist_min) {
+								//console.log("min!")
+								dist_min = dist;
+							}
+							
+						}
+					}
+				}
+				if (dist_min > 0) {
+					//console.log("dist_min: "+dist_min);
+					falling_tetromino.moveY(dist_min);
+				}
+				hard_drop_flag = true; // 落としたら固定する
+				
 			}
 			
 			// 落下加速
