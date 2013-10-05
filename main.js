@@ -6,11 +6,17 @@ TODO
 FixedTetrominoの天井を１マス（か２マス）上に上げる（一番上で回転できるように。・・・そこで固定されたらどうしよう）
 ハードドロップで、ボタン押しっぱなしだと次のブロックもハードドロップしてしまう。（誤操作を招く）
 →出現から数フレーム待つようにするのはどうか。また変数が増える・・・。
-			
+→連続して入力できないようにした。代わりに押しっぱなしはできない。
+×：ハードドロップ中に横移動できちゃう。（回転も）
+→ハードドロップ中は操作を受け付けないようにする
+△：１フレーム中に最大１ブロックしか落ちない。
+
+		
 ・効率UP
 FallingTetrominoのblocksを行列形式でなくリスト形式にする
 ・命名規則？
 FallingTetrominoのrotateRight/Leftの名前をmakeRightRotatedBlocksとでも変える
+→リファクタリングした方では別名が・・・
 FixedTetrominoのhitDetectの名前を変える。detect???とか？
 
 ・・・重くなってきた。
@@ -452,12 +458,12 @@ window.onload = function () {
 		falling_tetromino.addEventListener("enterframe", function () {
 			// ユーザからの操作を受け付ける
 			var newblocks;
-			if (game.input.left && (key_count.left % moveLR_interval) == 0) {
+			if (!hard_drop_flag && game.input.left && (key_count.left % moveLR_interval) == 0) {
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE - 1, this.y/BLOCKSIZE, this.blocks) == null) {
 					this.moveLeft();
 				}
 			}
-			if (game.input.right && (key_count.right % moveLR_interval) == 0) {
+			if (!hard_drop_flag && game.input.right && (key_count.right % moveLR_interval) == 0) {
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE + 1, this.y/BLOCKSIZE, this.blocks) == null) {
 					this.moveRight();
 				}
@@ -468,14 +474,14 @@ window.onload = function () {
 				}
 			}*/
 			
-			if (game.input.a && key_count.a == 0) {
+			if (!hard_drop_flag && game.input.a && key_count.a == 0) {
 				newblocks = this.rotateLeft();
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE, this.y/BLOCKSIZE, newblocks) == null) {
 					this.blocks = newblocks;
 					this.drawblocks();
 				}
 			}
-			if (game.input.b && key_count.b == 0) {
+			if (!hard_drop_flag && game.input.b && key_count.b == 0) {
 				newblocks = this.rotateRight();
 				if (fixed_tetromino.hitDetect(this.x/BLOCKSIZE, this.y/BLOCKSIZE, newblocks) == null) {
 					this.blocks = newblocks;
